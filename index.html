@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>SSI LOG – Nhật Ký Giao Dịch</title>
+<meta name="description" content="Ứng dụng nhật ký giao dịch chứng khoán Việt Nam với phân tích AI Gemini"/>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+<!-- AUTH SCREEN -->
+<div id="authScreen" class="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <span class="logo-ssi">SSI</span><span class="logo-log"> LOG</span>
+    </div>
+    <p class="auth-welcome">Chào mừng bạn quay trở lại</p>
+
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tabLogin" onclick="switchTab('login')">Đăng Nhập</button>
+      <button class="auth-tab" id="tabRegister" onclick="switchTab('register')">Đăng Ký</button>
+    </div>
+
+    <div id="loginForm">
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="loginEmail" class="form-input" placeholder="thao@example.com"/>
+      </div>
+      <div class="form-group">
+        <label>Mật khẩu</label>
+        <input type="password" id="loginPass" class="form-input" placeholder="••••••••"/>
+      </div>
+      <button class="btn-primary" onclick="doLogin()">Đăng Nhập</button>
+      <button class="btn-google" onclick="doGoogleLogin()">
+        <svg viewBox="0 0 24 24" width="18" height="18"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+        Đăng nhập bằng Google
+      </button>
+    </div>
+
+    <div id="registerForm" style="display:none">
+      <div class="form-group">
+        <label>Họ và tên</label>
+        <input type="text" id="regName" class="form-input" placeholder="Nguyễn Văn A"/>
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="regEmail" class="form-input" placeholder="thao@example.com"/>
+      </div>
+      <div class="form-group">
+        <label>Mật khẩu</label>
+        <input type="password" id="regPass" class="form-input" placeholder="Tối thiểu 6 ký tự"/>
+      </div>
+      <button class="btn-primary" onclick="doRegister()">Tạo tài khoản</button>
+      <button class="btn-google" onclick="doGoogleLogin()">
+        <svg viewBox="0 0 24 24" width="18" height="18"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+        Đăng ký bằng Google
+      </button>
+    </div>
+
+    <div class="cloud-info">
+      <span class="cloud-dot">☁️</span>
+      <span>Dữ liệu được lưu trữ an toàn trên thiết bị của bạn</span>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="appScreen" class="app-screen" style="display:none">
+
+  <!-- HEADER -->
+  <header class="app-header">
+    <div class="header-left">
+      <button class="icon-btn" id="sidebarToggle">☰</button>
+      <div class="header-logo">
+        <span class="logo-ssi">SSI</span><span class="logo-log"> LOG</span>
+      </div>
+    </div>
+    <nav class="header-nav">
+      <button class="nav-btn active" onclick="showView('dashboard')" id="navDash">📊 Tổng quan</button>
+      <button class="nav-btn" onclick="showView('transactions')" id="navTx">📋 Giao dịch</button>
+      <button class="nav-btn" onclick="showView('analysis')" id="navAI">🤖 AI Phân tích</button>
+      <button class="nav-btn" onclick="showView('data')" id="navData">💾 Dữ liệu</button>
+    </nav>
+    <div class="header-right">
+      <span class="user-name" id="userName"></span>
+      <button class="icon-btn" id="themeBtn" onclick="toggleTheme()" title="Đổi theme">🌙</button>
+      <button class="icon-btn" onclick="doLogout()" title="Đăng xuất">🚪</button>
+    </div>
+  </header>
+
+  <div class="app-body">
+
+    <!-- SIDEBAR -->
+    <aside class="app-sidebar" id="appSidebar">
+      <div class="sidebar-section">
+        <div class="section-label">DANH MỤC</div>
+        <div class="holdings-list" id="holdingsList"><p class="empty-hint">Chưa có cổ phiếu</p></div>
+      </div>
+      <div class="sidebar-section">
+        <div class="section-label">API KEY</div>
+        <input type="password" id="apiKeyInput" class="sidebar-input" placeholder="Gemini API Key..."/>
+        <p class="hint-text">Lấy tại <a href="https://aistudio.google.com/apikey" target="_blank">AI Studio</a></p>
+        <button class="btn-sm" onclick="saveApiKey()">Lưu</button>
+      </div>
+      <div class="sidebar-section">
+        <div class="section-label">MÔ HÌNH</div>
+        <select class="sidebar-select" id="modelSelect">
+          <option value="gemini-2.0-flash">⚡ Gemini 2.0 Flash</option>
+          <option value="gemini-1.5-pro">🧠 Gemini 1.5 Pro</option>
+          <option value="gemini-1.5-flash">🔹 Gemini 1.5 Flash</option>
+        </select>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="app-main" id="appMain">
+
+      <!-- DASHBOARD VIEW -->
+      <div id="viewDashboard" class="view">
+        <div class="view-header">
+          <h2>📊 Tổng quan danh mục</h2>
+          <span id="lastUpdated" class="hint-text"></span>
+        </div>
+
+        <!-- METRICS ROW -->
+        <div class="metrics-row">
+          <div class="metric-card">
+            <div class="metric-label">Tổng vốn đầu tư</div>
+            <div class="metric-val" id="metTotalCost">0 ₫</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Giá trị hiện tại</div>
+            <div class="metric-val" id="metCurrentVal">0 ₫</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Lãi/Lỗ (P&L)</div>
+            <div class="metric-val" id="metPnL">0 ₫</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">% Lãi/Lỗ</div>
+            <div class="metric-val" id="metPnLPct">0%</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Số GD thắng</div>
+            <div class="metric-val" id="metWins">0</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Win Rate</div>
+            <div class="metric-val" id="metWinRate">0%</div>
+          </div>
+        </div>
+
+        <!-- CHARTS ROW -->
+        <div class="charts-row">
+          <div class="chart-card">
+            <h3>📈 Biểu đồ P&L theo thời gian</h3>
+            <canvas id="pnlChart" height="200"></canvas>
+            <div id="pnlEmpty" class="chart-empty">Chưa có dữ liệu giao dịch</div>
+          </div>
+          <div class="chart-card">
+            <h3>🥧 Phân bổ danh mục</h3>
+            <canvas id="allocChart" height="200"></canvas>
+            <div id="allocEmpty" class="chart-empty">Chưa có vị thế mở</div>
+          </div>
+        </div>
+
+        <!-- HOLDINGS TABLE -->
+        <div class="table-card">
+          <h3>📂 Vị thế hiện tại</h3>
+          <div class="table-wrap">
+            <table id="holdingsTable">
+              <thead><tr><th>Mã CP</th><th>Số lượng</th><th>Giá vốn TB</th><th>Giá hiện tại</th><th>Giá trị</th><th>P&L</th><th>%</th></tr></thead>
+              <tbody id="holdingsBody"><tr><td colspan="7" class="empty-row">Chưa có vị thế</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- TRANSACTIONS VIEW -->
+      <div id="viewTransactions" class="view" style="display:none">
+        <div class="view-header">
+          <h2>📋 Quản lý giao dịch</h2>
+          <div class="header-actions">
+            <button class="btn-sm" onclick="openAddTx()">➕ Thêm GD</button>
+            <button class="btn-sm btn-outline" onclick="document.getElementById('csvInput').click()">📂 Import CSV</button>
+            <input type="file" id="csvInput" accept=".csv" hidden onchange="importCSV(event)"/>
+          </div>
+        </div>
+
+        <!-- FILTER BAR -->
+        <div class="filter-bar">
+          <input type="text" id="filterStock" class="filter-input" placeholder="Lọc theo mã CP..." oninput="renderTxTable()"/>
+          <select class="filter-input" id="filterType" onchange="renderTxTable()">
+            <option value="">Tất cả loại</option>
+            <option value="BUY">Mua</option>
+            <option value="SELL">Bán</option>
+          </select>
+          <input type="date" id="filterFrom" class="filter-input" onchange="renderTxTable()"/>
+          <input type="date" id="filterTo" class="filter-input" onchange="renderTxTable()"/>
+        </div>
+
+        <div class="table-card">
+          <div class="table-wrap">
+            <table id="txTable">
+              <thead><tr><th>Ngày</th><th>Mã CP</th><th>Loại</th><th>Số lượng</th><th>Giá</th><th>Phí</th><th>Thành tiền</th><th>Ghi chú</th><th></th></tr></thead>
+              <tbody id="txBody"><tr><td colspan="9" class="empty-row">Chưa có giao dịch. Hãy thêm hoặc import CSV.</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- AI ANALYSIS VIEW -->
+      <div id="viewAnalysis" class="view" style="display:none">
+        <div class="view-header">
+          <h2>🤖 AI Phân tích giao dịch</h2>
+        </div>
+
+        <div class="ai-layout">
+          <!-- CHAT -->
+          <div class="ai-chat-col">
+            <div class="chat-msgs" id="chatMsgs">
+              <div class="ai-welcome">
+                <div class="ai-icon">🤖</div>
+                <h3>Gemini AI – Chuyên gia TTCK Việt Nam</h3>
+                <p>Hỏi tôi bất cứ điều gì về giao dịch của bạn, chiến lược đầu tư, hoặc phân tích cổ phiếu HOSE/HNX.</p>
+                <div class="ai-chips">
+                  <button class="ai-chip" onclick="askAI(this)">📊 Phân tích toàn bộ danh mục của tôi</button>
+                  <button class="ai-chip" onclick="askAI(this)">🧠 Phân tích tâm lý giao dịch của tôi</button>
+                  <button class="ai-chip" onclick="askAI(this)">⚠️ Rủi ro lớn nhất hiện tại là gì?</button>
+                  <button class="ai-chip" onclick="askAI(this)">💡 Đề xuất cải thiện chiến lược</button>
+                  <button class="ai-chip" onclick="askAI(this)">📉 Phân tích các giao dịch lỗ</button>
+                </div>
+              </div>
+            </div>
+            <div class="chat-input-area">
+              <textarea id="chatInput" placeholder="Nhập câu hỏi... (Enter gửi, Shift+Enter xuống dòng)" rows="1" onkeydown="chatKeyDown(event)" oninput="autoH(this)"></textarea>
+              <button class="send-btn" id="chatSend" onclick="sendChat()">➤</button>
+            </div>
+          </div>
+
+          <!-- QUICK ANALYSIS -->
+          <div class="ai-side-col">
+            <div class="ai-panel">
+              <h4>⚡ Phân tích nhanh</h4>
+              <button class="btn-primary full-w" onclick="runQuickAnalysis('portfolio')">📊 Phân tích danh mục</button>
+              <button class="btn-outline full-w mt8" onclick="runQuickAnalysis('psychology')">🧠 Phân tích tâm lý</button>
+              <button class="btn-outline full-w mt8" onclick="runQuickAnalysis('risk')">⚠️ Đánh giá rủi ro</button>
+              <button class="btn-outline full-w mt8" onclick="runQuickAnalysis('daily')">📰 Phân tích hôm nay</button>
+            </div>
+            <div class="ai-panel" id="aiResult" style="display:none">
+              <div class="ai-result-content" id="aiResultContent"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DATA VIEW -->
+      <div id="viewData" class="view" style="display:none">
+        <div class="view-header"><h2>💾 Quản lý dữ liệu</h2></div>
+        <div class="data-grid">
+          <div class="data-card">
+            <div class="data-icon">⬇️</div>
+            <h4>Sao lưu dự phòng (JSON)</h4>
+            <p>Xuất toàn bộ dữ liệu giao dịch ra file JSON để sao lưu.</p>
+            <button class="btn-primary" onclick="exportJSON()">Xuất JSON</button>
+          </div>
+          <div class="data-card">
+            <div class="data-icon">⬆️</div>
+            <h4>Khôi phục từ file</h4>
+            <p>Import dữ liệu từ file JSON đã sao lưu trước đó.</p>
+            <button class="btn-outline" onclick="document.getElementById('jsonInput').click()">Chọn file JSON</button>
+            <input type="file" id="jsonInput" accept=".json" hidden onchange="importJSON(event)"/>
+          </div>
+          <div class="data-card">
+            <div class="data-icon">📊</div>
+            <h4>Xuất CSV</h4>
+            <p>Xuất dữ liệu giao dịch ra file CSV để mở trong Excel.</p>
+            <button class="btn-outline" onclick="exportCSV()">Xuất CSV</button>
+          </div>
+          <div class="data-card danger-card">
+            <div class="data-icon">🗑️</div>
+            <h4>Xóa toàn bộ dữ liệu</h4>
+            <p>Xóa tất cả giao dịch. Hành động này không thể hoàn tác!</p>
+            <button class="btn-danger" onclick="clearAllData()">Xóa tất cả</button>
+          </div>
+        </div>
+
+        <div class="table-card mt16">
+          <h3>📋 Hướng dẫn import CSV</h3>
+          <p class="hint-text">File CSV phải có các cột theo thứ tự sau:</p>
+          <pre class="code-block">Ngày,Mã CP,Loại,Số lượng,Giá,Phí,Ghi chú
+2024-01-15,VNM,BUY,1000,85000,150000,Mua VNM giá tốt
+2024-02-20,VNM,SELL,500,92000,100000,Chốt lời 50%</pre>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- MODAL: ADD/EDIT TRANSACTION -->
+<div class="modal-overlay" id="txModal" style="display:none">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3 id="txModalTitle">Thêm giao dịch mới</h3>
+      <button class="icon-btn" onclick="closeTxModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Ngày giao dịch *</label>
+          <input type="date" id="txDate" class="form-input"/>
+        </div>
+        <div class="form-group">
+          <label>Mã cổ phiếu *</label>
+          <input type="text" id="txStock" class="form-input" placeholder="VNM, HPG, VIC..."/>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Loại giao dịch *</label>
+          <select id="txType" class="form-input">
+            <option value="BUY">🟢 Mua</option>
+            <option value="SELL">🔴 Bán</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Số lượng *</label>
+          <input type="number" id="txQty" class="form-input" placeholder="100" min="1"/>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Giá (VNĐ/cp) *</label>
+          <input type="number" id="txPrice" class="form-input" placeholder="85000" min="0"/>
+        </div>
+        <div class="form-group">
+          <label>Phí giao dịch (VNĐ)</label>
+          <input type="number" id="txFee" class="form-input" placeholder="0" min="0" value="0"/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Giá hiện tại (VNĐ/cp) – dùng tính P&L</label>
+        <input type="number" id="txCurrentPrice" class="form-input" placeholder="Để trống nếu chưa có"/>
+      </div>
+      <div class="form-group">
+        <label>Ghi chú / Lý do</label>
+        <textarea id="txNote" class="form-input" rows="2" placeholder="Lý do vào lệnh, cảm xúc lúc đó..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-outline" onclick="closeTxModal()">Hủy</button>
+      <button class="btn-primary" onclick="saveTx()">Lưu giao dịch</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
