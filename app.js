@@ -74,12 +74,26 @@ function loginSuccess(u) {
   $('userName').textContent = u.name || u.email;
   
   const key = localStorage.getItem('ssilog_apikey');
-  if (key) $('apiKeyInput').value = key;
+  if (key) {
+    const apiInput = $('apiKeyInput');
+    if (apiInput) apiInput.value = key;
+    updateAiStatus(true);
+  } else {
+    updateAiStatus(false);
+  }
   
   const model = localStorage.getItem('ssilog_model');
-  if (model) $('modelSelect').value = model;
+  if (model && $('modelSelect')) $('modelSelect').value = model;
   
   showView('dashboard');
+}
+
+function updateAiStatus(connected) {
+  const st = $('aiStatus');
+  if (st) {
+    st.textContent = connected ? '🟢 Đã kết nối AI' : '🔴 Chưa kết nối';
+    st.className = 'ai-status-tag ' + (connected ? 'green' : 'red');
+  }
 }
 
 function doLogout() {
@@ -129,21 +143,26 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function saveApiKey() { 
-  const key = $('apiKeyInput').value.trim();
-  localStorage.setItem('ssilog_apikey', key); 
-  toast('✅ Đã lưu API Key!'); 
+  const keyInput = $('apiKeyInput');
+  if (keyInput) {
+    const key = keyInput.value.trim();
+    localStorage.setItem('ssilog_apikey', key); 
+    updateAiStatus(!!key);
+    toast('✅ Đã lưu cấu hình AI!'); 
+  }
 }
 
 // ── THEME ─────────────────────────────────────────────────────
 function toggleTheme() {
-  document.body.classList.toggle('dark');
+  const isDark = document.body.classList.toggle('dark');
   const themeBtn = $('themeBtn');
   if (themeBtn) {
-    themeBtn.textContent = document.body.classList.contains('dark') ? '☀️' : '🌙';
+    themeBtn.textContent = isDark ? '☀️' : '🌙';
   }
-  localStorage.setItem('ssilog_theme', document.body.classList.contains('dark') ? 'dark' : 'light');
+  localStorage.setItem('ssilog_theme', isDark ? 'dark' : 'light');
 }
 
+// Chạy ngay khi load script
 if (localStorage.getItem('ssilog_theme') === 'dark') {
   document.body.classList.add('dark');
 }
@@ -397,10 +416,20 @@ function buildContext() {
   return 'DỮ LIỆU GIAO DỊCH:\n' + lines.join('\n');
 }
 
-const SYS_PROMPT = `Bạn là chuyên gia phân tích chứng khoán Việt Nam với hơn 10 năm kinh nghiệm tại HoSE/HNX.
-Bạn đang phân tích nhật ký giao dịch cá nhân của nhà đầu tư.
-Luôn trả lời bằng tiếng Việt, rõ ràng, có cấu trúc. Sử dụng bảng và bullet points khi phù hợp.
-Tập trung vào: entry/exit analysis, risk management, tâm lý giao dịch, win rate, R:R ratio.`;
+const SYS_PROMPT = `Bạn là Trợ lý AI thông minh của ứng dụng SSI LOG – Nhật ký giao dịch chứng khoán Việt Nam.
+Nhiệm vụ của bạn:
+1. Phân tích dữ liệu giao dịch (entry, exit, lãi lỗ, rủi ro) của người dùng.
+2. Hướng dẫn người dùng sử dụng website SSI LOG.
+
+HƯỚNG DẪN SỬ DỤNG WEBSITE CHO NGƯỜI DÙNG:
+- Tab Tổng quan (Dashboard): Xem tóm tắt lãi lỗ, win rate và biểu đồ danh mục.
+- Tab Giao dịch (Transactions): Thêm giao dịch mới (nút "Thêm GD"), sửa/xóa, lọc mã cổ phiếu hoặc Import file CSV từ Excel.
+- Tab AI Phân tích: Trò chuyện với tôi hoặc dùng các nút phân tích nhanh.
+- Tab Cài đặt & Dữ liệu: Nơi nhập Gemini API Key để kích hoạt AI, sao lưu dữ liệu (Xuất JSON/CSV) hoặc xóa toàn bộ dữ liệu.
+- Sidebar: Xem danh sách cổ phiếu đang nắm giữ và trạng thái kết nối AI.
+- Góc trên bên phải: Đổi chế độ Sáng/Tối (nút 🌙/☀️) và Đăng xuất.
+
+Hãy trả lời lịch sự, chuyên nghiệp bằng tiếng Việt. Luôn ưu tiên dùng bảng biểu hoặc danh sách gạch đầu dòng để thông tin rõ ràng.`;
 
 function chatKeyDown(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); } }
 
