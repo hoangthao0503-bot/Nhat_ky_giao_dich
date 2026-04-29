@@ -51,7 +51,7 @@ function loginSuccess(u) {
   if (key && $('apiKeyInput')) {
     if (key.startsWith('AIza')) $('apiKeyInput').value = key;
   }
-  const model = localStorage.getItem('ssilog_model') || 'gemini-1.5-flash';
+  const model = localStorage.getItem('ssilog_model') || 'gemini-1.5-flash-latest';
   if ($('modelSelect')) $('modelSelect').value = model;
   updateAiStatus(!!getApiKey());
   showView('dashboard');
@@ -210,9 +210,8 @@ function getApiKey() {
   return DEFAULT_API_KEY; 
 }
 function getModel() { 
-  const m = $('modelSelect')?.value || 'gemini-1.5-flash';
-  // ÉP BUỘC CHUYỂN GEMINI 2.0 SANG 1.5 NẾU CÓ LỖI LƯU TRỮ
-  if (m.includes('gemini-2.0')) return 'models/gemini-1.5-flash';
+  const m = $('modelSelect')?.value || 'gemini-1.5-flash-latest';
+  // Luôn đảm bảo có tiền tố models/
   return m.includes('/') ? m : `models/${m}`;
 }
 
