@@ -51,7 +51,7 @@ function loginSuccess(u) {
   if (key && $('apiKeyInput')) {
     if (key.startsWith('AIza')) $('apiKeyInput').value = key;
   }
-  const model = localStorage.getItem('ssilog_model') || 'gemini-1.5-flash-latest';
+  const model = localStorage.getItem('ssilog_model') || 'gemini-1.5-flash';
   if ($('modelSelect')) $('modelSelect').value = model;
   updateAiStatus(!!getApiKey());
   showView('dashboard');
@@ -209,10 +209,10 @@ function getApiKey() {
   if (savedK.startsWith('AIza')) return savedK;
   return DEFAULT_API_KEY; 
 }
-
-// TÊN MODEL SỬ DỤNG PHẢI TUÂN THỦ NGHIÊM NGẶT ĐỊNH DẠNG MODELS/NAME
 function getModel() { 
-  const m = $('modelSelect')?.value || 'gemini-1.5-flash-latest';
+  const m = $('modelSelect')?.value || 'gemini-1.5-flash';
+  // ÉP BUỘC CHUYỂN GEMINI 2.0 SANG 1.5 NẾU CÓ LỖI LƯU TRỮ
+  if (m.includes('gemini-2.0')) return 'models/gemini-1.5-flash';
   return m.includes('/') ? m : `models/${m}`;
 }
 
@@ -229,10 +229,8 @@ async function sendChat() {
 }
 
 async function callGemini(p) {
-  // SỬ DỤNG V1BETA VÌ NÓ HỖ TRỢ ĐA DẠNG MODEL MIỄN PHÍ HƠN
   const modelName = getModel();
   const url = `https://generativelanguage.googleapis.com/v1beta/${modelName}:generateContent?key=${getApiKey()}`;
-  
   try {
     const res = await fetch(url, { 
       method:'POST', 
@@ -243,22 +241,10 @@ async function callGemini(p) {
         }]
       }) 
     });
-    
     if(!res.ok) {
       const err = await res.json();
-      // NẾU LỖI QUOTA HOẶC MODEL, THỬ MODEL DỰ PHÒNG 1.5 FLASH LATEST
-      if ((res.status === 429 || res.status === 404) && !modelName.includes('gemini-1.5-flash-latest')) {
-        console.log('Đang thử model dự phòng...');
-        const retryUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${getApiKey()}`;
-        const res2 = await fetch(retryUrl, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ contents:[{parts:[{text:p}]}] }) });
-        if (res2.ok) {
-          const data2 = await res2.json();
-          return data2.candidates?.[0]?.content?.parts?.[0]?.text || '...';
-        }
-      }
       return '❌ Lỗi API: ' + (err.error?.message || 'Không xác định');
     }
-    
     const data = await res.json();
     return data.candidates?.[0]?.content?.parts?.[0]?.text || '...';
   } catch(e){ return '❌ Lỗi kết nối AI'; }
