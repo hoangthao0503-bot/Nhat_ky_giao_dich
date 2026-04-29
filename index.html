@@ -7,6 +7,13 @@
 <meta name="description" content="Ứng dụng nhật ký giao dịch chứng khoán Việt Nam với phân tích AI Gemini"/>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="style.css"/>
+<script>
+  // KHỞI TẠO THEME NGAY LẬP TỨC ĐỂ TRÁNH BỊ NHÁY MÀN HÌNH
+  (function() {
+    const theme = localStorage.getItem('ssilog_theme') || 'light';
+    if (theme === 'dark') document.documentElement.classList.add('dark');
+  })();
+</script>
 </head>
 <body>
 
@@ -85,7 +92,7 @@
     </nav>
     <div class="header-right">
       <span class="user-name" id="userName"></span>
-      <button class="icon-btn" id="themeBtn" onclick="toggleTheme()" title="Đổi theme">🌙</button>
+      <button class="icon-btn" id="themeBtn" title="Đổi theme">🌙</button>
       <button class="icon-btn" onclick="doLogout()" title="Đăng xuất">🚪</button>
     </div>
   </header>
@@ -99,18 +106,8 @@
         <div class="holdings-list" id="holdingsList"><p class="empty-hint">Chưa có cổ phiếu</p></div>
       </div>
       <div class="sidebar-section">
-        <div class="section-label">API KEY</div>
-        <input type="password" id="apiKeyInput" class="sidebar-input" placeholder="Gemini API Key..."/>
-        <p class="hint-text">Lấy tại <a href="https://aistudio.google.com/apikey" target="_blank">AI Studio</a></p>
-        <button class="btn-sm" onclick="saveApiKey()">Lưu</button>
-      </div>
-      <div class="sidebar-section">
-        <div class="section-label">MÔ HÌNH</div>
-        <select class="sidebar-select" id="modelSelect">
-          <option value="gemini-2.0-flash">⚡ Gemini 2.0 Flash</option>
-          <option value="gemini-1.5-pro">🧠 Gemini 1.5 Pro</option>
-          <option value="gemini-1.5-flash">🔹 Gemini 1.5 Flash</option>
-        </select>
+        <div class="section-label">TRẠNG THÁI AI</div>
+        <div id="aiStatus" class="ai-status-tag red">🔴 Chưa kết nối</div>
       </div>
     </aside>
 
@@ -214,7 +211,7 @@
       <!-- AI ANALYSIS VIEW -->
       <div id="viewAnalysis" class="view" style="display:none">
         <div class="view-header">
-          <h2>🤖 AI Phân tích giao dịch</h2>
+          <h2>🤖 Trợ lý Chứng khoán AI</h2>
         </div>
 
         <div class="ai-layout">
@@ -223,19 +220,18 @@
             <div class="chat-msgs" id="chatMsgs">
               <div class="ai-welcome">
                 <div class="ai-icon">🤖</div>
-                <h3>Gemini AI – Chuyên gia TTCK Việt Nam</h3>
-                <p>Hỏi tôi bất cứ điều gì về giao dịch của bạn, chiến lược đầu tư, hoặc phân tích cổ phiếu HOSE/HNX.</p>
+                <h3>Xin chào! Tôi là Trợ lý SSI LOG</h3>
+                <p>Tôi có thể giúp bạn phân tích danh mục, tâm lý giao dịch hoặc hướng dẫn bạn sử dụng các tính năng của website này.</p>
                 <div class="ai-chips">
-                  <button class="ai-chip" onclick="askAI(this)">📊 Phân tích toàn bộ danh mục của tôi</button>
-                  <button class="ai-chip" onclick="askAI(this)">🧠 Phân tích tâm lý giao dịch của tôi</button>
-                  <button class="ai-chip" onclick="askAI(this)">⚠️ Rủi ro lớn nhất hiện tại là gì?</button>
-                  <button class="ai-chip" onclick="askAI(this)">💡 Đề xuất cải thiện chiến lược</button>
-                  <button class="ai-chip" onclick="askAI(this)">📉 Phân tích các giao dịch lỗ</button>
+                  <button class="ai-chip" onclick="askAI(this)">❓ Cách sử dụng website này như thế nào?</button>
+                  <button class="ai-chip" onclick="askAI(this)">📊 Phân tích danh mục của tôi</button>
+                  <button class="ai-chip" onclick="askAI(this)">🧠 Kiểm tra tâm lý giao dịch</button>
+                  <button class="ai-chip" onclick="askAI(this)">📝 Hướng dẫn thêm giao dịch mới</button>
                 </div>
               </div>
             </div>
             <div class="chat-input-area">
-              <textarea id="chatInput" placeholder="Nhập câu hỏi... (Enter gửi, Shift+Enter xuống dòng)" rows="1" onkeydown="chatKeyDown(event)" oninput="autoH(this)"></textarea>
+              <textarea id="chatInput" placeholder="Hỏi tôi bất cứ điều gì..." rows="1" onkeydown="chatKeyDown(event)" oninput="autoH(this)"></textarea>
               <button class="send-btn" id="chatSend" onclick="sendChat()">➤</button>
             </div>
           </div>
@@ -249,7 +245,7 @@
               <button class="btn-outline full-w mt8" onclick="runQuickAnalysis('risk')">⚠️ Đánh giá rủi ro</button>
               <button class="btn-outline full-w mt8" onclick="runQuickAnalysis('daily')">📰 Phân tích hôm nay</button>
             </div>
-            <div class="ai-panel" id="aiResult" style="display:none">
+            <div id="aiResult" class="ai-panel" style="display:none">
               <div class="ai-result-content" id="aiResultContent"></div>
             </div>
           </div>
@@ -258,7 +254,31 @@
 
       <!-- DATA VIEW -->
       <div id="viewData" class="view" style="display:none">
-        <div class="view-header"><h2>💾 Quản lý dữ liệu</h2></div>
+        <div class="view-header"><h2>⚙️ Cài đặt & Dữ liệu</h2></div>
+        
+        <!-- SETTINGS SECTION -->
+        <div class="settings-panel-card mb16">
+          <h3>🔑 Cấu hình AI (Gemini API)</h3>
+          <div class="settings-row">
+            <div class="form-group flex-1">
+              <label>Gemini API Key</label>
+              <input type="password" id="apiKeyInput" class="form-input" placeholder="Dán API Key của bạn vào đây..."/>
+              <p class="hint-text">Lấy key miễn phí tại <a href="https://aistudio.google.com/apikey" target="_blank">Google AI Studio</a></p>
+            </div>
+            <div class="form-group" style="width: 200px;">
+              <label>Mô hình AI</label>
+              <select class="form-input" id="modelSelect">
+                <option value="gemini-1.5-flash" selected>⚡ Gemini 1.5 Flash (Ổn định)</option>
+                <option value="gemini-2.0-flash">🚀 Gemini 2.0 Flash</option>
+                <option value="gemini-1.5-pro">🧠 Gemini 1.5 Pro</option>
+              </select>
+            </div>
+            <div class="form-actions" style="align-self: flex-end; margin-bottom: 14px;">
+              <button class="btn-primary" onclick="saveApiKey()">Lưu cấu hình</button>
+            </div>
+          </div>
+        </div>
+
         <div class="data-grid">
           <div class="data-card">
             <div class="data-icon">⬇️</div>
@@ -361,6 +381,39 @@
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+  // PHẦN XỬ LÝ THEME TỰ ĐỘNG - CỰC KỲ QUAN TRỌNG
+  (function() {
+    const btn = document.getElementById('themeBtn');
+    const html = document.documentElement;
+    const body = document.body;
+    
+    function setDarkMode(isDark) {
+      if (isDark) {
+        html.classList.add('dark');
+        body.classList.add('dark');
+        btn.textContent = '☀️';
+      } else {
+        html.classList.remove('dark');
+        body.classList.remove('dark');
+        btn.textContent = '🌙';
+      }
+      localStorage.setItem('ssilog_theme', isDark ? 'dark' : 'light');
+    }
+
+    // Khởi tạo trạng thái ban đầu
+    const saved = localStorage.getItem('ssilog_theme') || 'light';
+    setDarkMode(saved === 'dark');
+
+    // Gán sự kiện click trực tiếp
+    btn.onclick = function(e) {
+      e.preventDefault();
+      const currentlyDark = html.classList.contains('dark');
+      setDarkMode(!currentlyDark);
+      console.log('Theme changed to:', !currentlyDark ? 'dark' : 'light');
+    };
+  })();
+</script>
 <script src="app.js"></script>
 </body>
 </html>
