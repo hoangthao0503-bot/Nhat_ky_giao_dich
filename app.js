@@ -254,38 +254,34 @@ function renderTxTable() {
   }
 }
 
-// ── AI ENGINE (GEMINI) ─────────────────────────────────────────
+// ── AI ENGINE (OPTIMIZED) ──────────────────────────────────────
 function getApiKey() { 
   const inputK = ($('apiKeyInput')?.value || '').trim();
   const savedK = (localStorage.getItem('ssilog_apikey') || '').trim();
   return (inputK.startsWith('AIza') ? inputK : (savedK.startsWith('AIza') ? savedK : DEFAULT_API_KEY)); 
 }
 
-// CHUYỂN SANG V1 ENDPOINT VÀ MODEL CỐ ĐỊNH ĐỂ CỨU CHATBOT
+// ƯU TIÊN LỘ TRÌNH NHANH NHẤT ĐỂ GIẢM ĐỘ TRỄ
 async function callGemini(p) {
-  // Thử v1 endpoint - chính thức và ổn định nhất
-  const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${getApiKey()}`;
+  // Lộ trình A: v1beta/gemini-1.5-flash-latest (Thường là nhanh nhất)
+  const urlA = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${getApiKey()}`;
   try {
-    const res = await fetch(url, { 
+    const res = await fetch(urlA, { 
       method:'POST', headers:{'Content-Type':'application/json'}, 
       body:JSON.stringify({ contents:[{ parts:[{text:p}] }] }) 
     });
     
-    // NẾU VẪN LỖI (VÍ DỤ V1 CHƯA CÓ TRONG VÙNG ĐÓ), THỬ LẠI VỚI GEMINI-PRO NHƯ LỰA CHỌN B
     if(!res.ok) {
-       const urlFallback = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${getApiKey()}`;
-       const resFallback = await fetch(urlFallback, { 
+       // Lộ trình B: Fallback sang gemini-pro (Dành cho vùng bị giới hạn flash)
+       const urlB = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${getApiKey()}`;
+       const resB = await fetch(urlB, { 
          method:'POST', headers:{'Content-Type':'application/json'}, 
          body:JSON.stringify({ contents:[{ parts:[{text:p}] }] }) 
        });
-       if (!resFallback.ok) {
-          const err = await resFallback.json();
-          return '❌ Lỗi AI: ' + (err.error?.message || 'Không xác định');
-       }
-       const dataF = await resFallback.json();
-       return dataF.candidates?.[0]?.content?.parts?.[0]?.text || '...';
+       if (!resB.ok) return '❌ AI đang bận, vui lòng thử lại sau vài giây.';
+       const dataB = await resB.json();
+       return dataB.candidates?.[0]?.content?.parts?.[0]?.text || '...';
     }
-    
     const data = await res.json();
     return data.candidates?.[0]?.content?.parts?.[0]?.text || '...';
   } catch(e){ return '❌ Lỗi kết nối AI'; }
@@ -298,8 +294,9 @@ async function sendCwMsg() {
   const inp = $('cw-textarea-input'), txt = inp.value.trim(); if(!txt)return;
   inp.value = ''; appendCwMsg('user', txt);
   const tid = appendCwTyping();
-  const ctx = transactions.length ? `\n\nDANH MỤC: ${transactions.slice(-20).map(t=>`${t.stock}|${t.type}|${t.qty}|${t.price}`).join('; ')}` : '';
-  const reply = await callGemini(`${SYS_PROMPT}${ctx}\n\nKHÁCH HỎI: ${txt}`);
+  // TỐI ƯU CONTEXT ĐỂ AI PHẢN HỒI NHANH HƠN
+  const ctx = transactions.length ? `\n\nDM: ${transactions.slice(-10).map(t=>`${t.stock} ${t.type}`).join(',')}` : '';
+  const reply = await callGemini(`${SYS_PROMPT}${ctx}\n\nHỎI: ${txt}`);
   removeCwTyping(tid); appendCwMsg('bot', reply);
 }
 
@@ -328,14 +325,14 @@ async function sendChat() {
   const inp = $('chatInput'), txt = inp.value.trim(); if(!txt)return;
   appendChatMsg('user', txt); inp.value=''; inp.style.height='auto';
   const tid = appendTyping();
-  const ctx = transactions.length ? `\n\nDANH MỤC: ${transactions.slice(-20).map(t=>`${t.stock}|${t.type}|${t.qty}|${t.price}`).join('; ')}` : '';
-  const reply = await callGemini(`${SYS_PROMPT}${ctx}\n\nKHÁCH HỎI: ${txt}`);
+  const ctx = transactions.length ? `\n\nDM: ${transactions.slice(-10).map(t=>`${t.stock} ${t.type}`).join(',')}` : '';
+  const reply = await callGemini(`${SYS_PROMPT}${ctx}\n\nHỎI: ${txt}`);
   removeTyping(tid); appendChatMsg('model', reply);
 }
 
 function appendChatMsg(role, text) {
   const msgs = $('chatMsgs'); if(msgs){
-    const d=document.createElement('div'); d.className='chat-msg '+role; d.innerHTML=`<div class="chat-av ${role}">${role==='user'?'👤':'🤖'}</div><div class="chat-av-body"><div class="chat-msg-text">${parseMd(text)}</div></div>`;
+    const d=document.createElement('div'); d.className='chat-msg '+role; d.innerHTML=`<div class="chat-av ${role}">${role==='user'?'👤':'🤖'}</div><div class="chat-msg-body"><div class="chat-msg-text">${parseMd(text)}</div></div>`;
     msgs.appendChild(d); msgs.scrollTop=msgs.scrollHeight; const w=msgs.querySelector('.ai-welcome'); if(w) w.style.display='none';
   }
 }
