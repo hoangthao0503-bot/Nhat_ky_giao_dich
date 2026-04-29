@@ -1,3 +1,7 @@
+// ── CONFIG ────────────────────────────────────────────────────
+// DÁN API KEY CỦA BẠN VÀO ĐÂY ĐỂ DÙNG MÀ KHÔNG CẦN NHẬP TRÊN WEB
+const DEFAULT_API_KEY = ""; 
+
 // ── DATA ──────────────────────────────────────────────────────
 let currentUser = null;
 let transactions = [];
@@ -119,13 +123,19 @@ function showView(v) {
 
 // ── SIDEBAR ───────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
+  // Attach Theme Toggle
+  const themeBtn = $('themeBtn');
+  if (themeBtn) {
+    themeBtn.addEventListener('click', toggleTheme);
+    // Khởi tạo icon đúng theo theme hiện tại
+    const isDark = document.body.classList.contains('dark');
+    themeBtn.textContent = isDark ? '☀️' : '🌙';
+  }
+
   const sidebarToggle = $('sidebarToggle');
   if (sidebarToggle) {
     sidebarToggle.addEventListener('click', () => $('appSidebar').classList.toggle('off'));
   }
-  
-  const themeBtn = $('themeBtn');
-  if (themeBtn) themeBtn.addEventListener('click', toggleTheme);
   
   const modelSelect = $('modelSelect');
   if (modelSelect) {
@@ -140,6 +150,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const txDate = $('txDate');
     if (txDate) txDate.value = new Date().toISOString().slice(0, 10);
   }
+  
+  // Kiểm tra trạng thái AI lúc đầu
+  updateAiStatus(!!getApiKey());
 });
 
 function saveApiKey() { 
@@ -407,7 +420,11 @@ function renderTxTable() {
 }
 
 // ── AI CHAT ───────────────────────────────────────────────────
-function getApiKey() { return ($('apiKeyInput').value || localStorage.getItem('ssilog_apikey') || '').trim(); }
+function getApiKey() { 
+  const inputKey = ($('apiKeyInput')?.value || '').trim();
+  const savedKey = (localStorage.getItem('ssilog_apikey') || '').trim();
+  return inputKey || savedKey || DEFAULT_API_KEY; 
+}
 function getModel()  { return $('modelSelect').value; }
 
 function buildContext() {
