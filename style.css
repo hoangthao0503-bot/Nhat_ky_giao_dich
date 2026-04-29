@@ -4,18 +4,17 @@
   --border:#dde1ef;--border2:#c8cde3;
   --text:#1a1d2e;--text2:#555a70;--text3:#9aa0b8;
   --accent:#cc0000;--accent2:#1a56db;
-  --green:#16a34a;--red:#dc2626;--yellow:#d97706;
-  --green-bg:#f0fdf4;--red-bg:#fef2f2;--yellow-bg:#fffbeb;
-  --r:12px;--r2:8px;--r3:20px;
+  --green:#22c55e;--red:#ef4444;--yellow:#f59e0b;
+  --green-bg:rgba(34,197,94,0.12);--red-bg:rgba(239,68,68,0.12);--yellow-bg:rgba(245,158,11,0.12);
+  --r:14px;--r2:10px;--r3:24px;
   --font:'Be Vietnam Pro',sans-serif;--mono:'JetBrains Mono',monospace;
   
-  /* CHATBOT WIDGET VARIABLES */
-  --cw-bg: #1a1a2e;
-  --cw-surface: #16213e;
-  --cw-accent: #e94560;
-  --cw-text: #eaeaea;
-  --cw-ai-bubble: #1e2a45;
-  --cw-border: rgba(255,255,255,0.08);
+  /* CHATBOT SUPER PREMIUM VARIABLES */
+  --cw-bg: #0d0f17;
+  --cw-surface: #141720;
+  --cw-surface2: #1c2030;
+  --cw-accent: #4f6ef7;
+  --cw-border: rgba(255,255,255,0.07);
   --shadow:0 2px 12px rgba(0,0,0,.08);--shadow2:0 8px 32px rgba(0,0,0,.12);
   --tr:.18s cubic-bezier(.4,0,.2,1);
   --header-h:56px;
@@ -265,4 +264,19 @@ tr:hover td{background:var(--bg3)}
   .header-nav .nav-btn span{display:none}.metrics-row{grid-template-columns:1fr 1fr}.ai-layout{grid-template-columns:1fr}.data-grid{grid-template-columns:1fr}
   .form-row{grid-template-columns:1fr}
 }
-@media(max-width:480px){.metrics-row{grid-template-columns:1fr 1fr}.header-nav{gap:2px}.nav-btn{font-size:12px;padding:6px 8px}}
+/* ── CHATBOT SUPER PREMIUM ANIMATIONS ── */
+.bubble.streaming::after {
+  content:'▋'; display:inline-block; animation:cwBlink .7s infinite;
+  color:var(--cw-accent); font-size:13px; margin-left:2px;
+}
+@keyframes cwBlink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+.dots-wrap { display:flex; gap:5px; align-items:center; padding:12px 14px; background:var(--bg3); border-radius:16px; width:fit-content; border:1px solid var(--border); }
+.dot-bounce { width:6px; height:6px; border-radius:50%; background:var(--text3); animation:cwBounce 1.1s infinite; }
+.dot-bounce:nth-child(2) { animation-delay:.18s; }
+.dot-bounce:nth-child(3) { animation-delay:.36s; }
+@keyframes cwBounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-6px)} }
+
+.msg-meta { font-size:10px; color:var(--text3); margin-top:4px; padding:0 4px; }
+.avatar.bot { background:rgba(79,110,247,0.15); border:1px solid rgba(79,110,247,0.25); color:var(--cw-accent); }
+.avatar.user { background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.25); color:var(--red); }

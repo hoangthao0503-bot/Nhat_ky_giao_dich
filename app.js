@@ -254,37 +254,51 @@ function renderTxTable() {
   }
 }
 
-// ── AI ENGINE (OPTIMIZED) ──────────────────────────────────────
+// ── AI ENGINE (STREAMING OPTIMIZED) ────────────────────────────
 function getApiKey() { 
   const inputK = ($('apiKeyInput')?.value || '').trim();
   const savedK = (localStorage.getItem('ssilog_apikey') || '').trim();
   return (inputK.startsWith('AIza') ? inputK : (savedK.startsWith('AIza') ? savedK : DEFAULT_API_KEY)); 
 }
 
-// ƯU TIÊN LỘ TRÌNH NHANH NHẤT ĐỂ GIẢM ĐỘ TRỄ
-async function callGemini(p) {
-  // Lộ trình A: v1beta/gemini-1.5-flash-latest (Thường là nhanh nhất)
-  const urlA = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${getApiKey()}`;
+// CHỈ DẪN HỆ THỐNG MỚI - NGẮN GỌN & SÚC TÍCH
+const SYS_PROMPT = `Bạn là trợ lý phân tích tâm lý chứng khoán. Hãy trả lời ngắn gọn, súc tích, đi thẳng vào vấn đề trong tối đa 3 câu. Sử dụng bullet points nếu cần thiết.`;
+
+// KỸ THUẬT STREAMING (PHẢN HỒI TỨC THỜI)
+async function callGeminiStream(p, onChunk, onDone, onError) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent?alt=sse&key=${getApiKey()}`;
   try {
-    const res = await fetch(urlA, { 
+    const res = await fetch(url, { 
       method:'POST', headers:{'Content-Type':'application/json'}, 
       body:JSON.stringify({ contents:[{ parts:[{text:p}] }] }) 
     });
     
-    if(!res.ok) {
-       // Lộ trình B: Fallback sang gemini-pro (Dành cho vùng bị giới hạn flash)
-       const urlB = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${getApiKey()}`;
-       const resB = await fetch(urlB, { 
-         method:'POST', headers:{'Content-Type':'application/json'}, 
-         body:JSON.stringify({ contents:[{ parts:[{text:p}] }] }) 
-       });
-       if (!resB.ok) return '❌ AI đang bận, vui lòng thử lại sau vài giây.';
-       const dataB = await resB.json();
-       return dataB.candidates?.[0]?.content?.parts?.[0]?.text || '...';
+    if(!res.ok) { onError('Lỗi kết nối AI'); return; }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while(true) {
+      const { done, value } = await reader.read();
+      if(done) break;
+      
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+
+      for(const line of lines) {
+        if (line.startsWith('data: ')) {
+          try {
+            const json = JSON.parse(line.substring(6));
+            const text = json.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (text) onChunk(text);
+          } catch(e) {}
+        }
+      }
     }
-    const data = await res.json();
-    return data.candidates?.[0]?.content?.parts?.[0]?.text || '...';
-  } catch(e){ return '❌ Lỗi kết nối AI'; }
+    onDone();
+  } catch(e){ onError('Lỗi hệ thống AI'); }
 }
 
 // ── FLOATING CHAT WIDGET LOGIC ────────────────────────────────
@@ -294,10 +308,30 @@ async function sendCwMsg() {
   const inp = $('cw-textarea-input'), txt = inp.value.trim(); if(!txt)return;
   inp.value = ''; appendCwMsg('user', txt);
   const tid = appendCwTyping();
-  // TỐI ƯU CONTEXT ĐỂ AI PHẢN HỒI NHANH HƠN
+  
+  let fullText = '';
+  const bub = createCwStreamBubble(); // Tạo bubble rỗng cho streaming
+  
   const ctx = transactions.length ? `\n\nDM: ${transactions.slice(-10).map(t=>`${t.stock} ${t.type}`).join(',')}` : '';
-  const reply = await callGemini(`${SYS_PROMPT}${ctx}\n\nHỎI: ${txt}`);
-  removeCwTyping(tid); appendCwMsg('bot', reply);
+  
+  callGeminiStream(`${SYS_PROMPT}${ctx}\n\nHỎI: ${txt}`, 
+    (chunk) => {
+      removeCwTyping(tid); // Xóa typing ngay khi có chunk đầu tiên
+      fullText += chunk;
+      bub.textContent = fullText;
+      bub.parentElement.parentElement.scrollTop = bub.parentElement.parentElement.scrollHeight;
+    },
+    () => { bub.classList.remove('streaming'); },
+    (err) => { removeCwTyping(tid); appendCwMsg('bot', '❌ ' + err); }
+  );
+}
+
+function createCwStreamBubble() {
+  const list = $('cw-msgs-list');
+  const d = document.createElement('div');
+  d.className = 'cw-bubble cw-msg-bot streaming';
+  list.appendChild(d);
+  return d;
 }
 
 function appendCwMsg(role, text) {
@@ -313,38 +347,55 @@ function appendCwTyping() {
   const id = 't'+Date.now(), list = $('cw-msgs-list');
   const d = document.createElement('div');
   d.id = id; d.className = 'cw-bubble cw-msg-bot';
-  d.innerHTML = '<div style="display:flex;gap:4px"><div class="dot">.</div><div class="dot">.</div><div class="dot">.</div></div>';
+  d.innerHTML = '<div class="dots-wrap"><div class="dot-bounce"></div><div class="dot-bounce"></div><div class="dot-bounce"></div></div>';
   list.appendChild(d); list.scrollTop = list.scrollHeight;
   return id;
 }
 function removeCwTyping(id) { const e=$(id); if(e) e.remove(); }
 function cwKeyDown(e) { if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendCwMsg(); } }
 
-// ── MAIN CHAT VIEW (SYNC WITH FLOATING) ───────────────────────
+// ── MAIN CHAT VIEW (SYNC WITH STREAMING) ───────────────────────
 async function sendChat() {
   const inp = $('chatInput'), txt = inp.value.trim(); if(!txt)return;
   appendChatMsg('user', txt); inp.value=''; inp.style.height='auto';
   const tid = appendTyping();
+  
+  let fullText = '';
+  const bub = createStreamBubble(); 
+  
   const ctx = transactions.length ? `\n\nDM: ${transactions.slice(-10).map(t=>`${t.stock} ${t.type}`).join(',')}` : '';
-  const reply = await callGemini(`${SYS_PROMPT}${ctx}\n\nHỎI: ${txt}`);
-  removeTyping(tid); appendChatMsg('model', reply);
+  
+  callGeminiStream(`${SYS_PROMPT}${ctx}\n\nHỎI: ${txt}`, 
+    (chunk) => {
+      removeTyping(tid);
+      fullText += chunk;
+      bub.innerHTML = parseMd(fullText);
+      bub.parentElement.parentElement.scrollTop = bub.parentElement.parentElement.scrollHeight;
+    },
+    () => { bub.classList.remove('streaming'); },
+    (err) => { removeTyping(tid); appendChatMsg('model', '❌ ' + err); }
+  );
+}
+
+function createStreamBubble() {
+  const msgs = $('chatMsgs');
+  const d=document.createElement('div'); d.className='chat-msg model'; 
+  d.innerHTML=`<div class="chat-av model">🤖</div><div class="chat-av-body"><div class="chat-msg-text bubble bot streaming"></div></div>`;
+  msgs.appendChild(d);
+  return d.querySelector('.chat-msg-text');
 }
 
 function appendChatMsg(role, text) {
   const msgs = $('chatMsgs'); if(msgs){
-    const d=document.createElement('div'); d.className='chat-msg '+role; d.innerHTML=`<div class="chat-av ${role}">${role==='user'?'👤':'🤖'}</div><div class="chat-msg-body"><div class="chat-msg-text">${parseMd(text)}</div></div>`;
+    const d=document.createElement('div'); d.className='chat-msg '+role; d.innerHTML=`<div class="chat-av ${role}">${role==='user'?'👤':'🤖'}</div><div class="chat-av-body"><div class="chat-msg-text">${parseMd(text)}</div></div>`;
     msgs.appendChild(d); msgs.scrollTop=msgs.scrollHeight; const w=msgs.querySelector('.ai-welcome'); if(w) w.style.display='none';
   }
 }
-function appendTyping() { const id='t'+Date.now(), msgs=$('chatMsgs'); const d=document.createElement('div'); d.id=id; d.className='chat-msg model'; d.innerHTML='<div class="chat-av model">🤖</div><div class="typing-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>'; msgs.appendChild(d); return id; }
+function appendTyping() { const id='t'+Date.now(), msgs=$('chatMsgs'); const d=document.createElement('div'); d.id=id; d.className='chat-msg model'; d.innerHTML='<div class="chat-av model">🤖</div><div class="dots-wrap"><div class="dot-bounce"></div><div class="dot-bounce"></div><div class="dot-bounce"></div></div>'; msgs.appendChild(d); msgs.scrollTop=msgs.scrollHeight; return id; }
 function removeTyping(id) { const e=$(id); if(e) e.remove(); }
 function parseMd(t) { return t.replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>'); }
 
-// ── DATA ──────────────────────────────────────────────────────
-function exportJSON(){ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([JSON.stringify(transactions)],{type:'application/json'})); a.download='ssi.json'; a.click(); }
-function importJSON(e){ const f=e.target.files[0]; if(!f)return; const r=new FileReader(); r.onload=ev=>{ transactions=JSON.parse(ev.target.result); saveTxs(); renderTxTable(); }; r.readAsText(f); }
-function exportCSV(){ const csv=transactions.map(t=>[t.date,t.stock,t.type,t.qty,t.price].join(',')).join('\n'); const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download='ssi.csv'; a.click(); }
-function clearAllData(){ if(confirm('Xóa hết?')){ transactions=[]; saveTxs(); renderTxTable(); } }
-
 // ── GLOBAL ────────────────────────────────────────────────────
 Object.assign(window, { switchTab, doLogin, doRegister, doGoogleLogin, doLogout, showView, saveApiKey, openAddTx, closeTxModal, saveTx, editTx, deleteTx, renderTxTable, sendChat, exportJSON, importJSON, exportCSV, clearAllData, calculateFee, toggleChatPanel, sendCwMsg, cwKeyDown, askAI: (b)=> { $('chatInput').value=b.textContent; sendChat(); } });
+function chatKeyDown(e){ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); sendChat(); } }
+window.chatKeyDown = chatKeyDown;

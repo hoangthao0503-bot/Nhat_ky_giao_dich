@@ -236,45 +236,45 @@
         </div>
       </div>
 
-      <!-- AI ANALYSIS VIEW -->
+      <!-- AI ANALYSIS VIEW (SUPER PREMIUM) -->
       <div id="viewAnalysis" class="view" style="display:none">
         <div class="view-header">
-          <h2>🤖 Trợ lý Chứng khoán AI</h2>
+          <h2>🤖 Trợ lý Chứng khoán AI <span class="header-badge" style="display:inline-flex; vertical-align:middle; margin-left:10px">v1.5 Flash</span></h2>
         </div>
 
         <div class="ai-layout">
           <!-- CHAT -->
           <div class="ai-chat-col">
+            <!-- QUICK ACTIONS BAR -->
+            <div class="quick-actions" style="padding:10px; border-bottom:1px solid var(--border); display:flex; gap:8px; overflow-x:auto">
+              <button class="qa-btn" onclick="askAI(this)">🧠 Tâm lý giao dịch</button>
+              <button class="qa-btn" onclick="askAI(this)">📊 Phân tích danh mục</button>
+              <button class="qa-btn" onclick="askAI(this)">📈 Xu hướng thị trường</button>
+              <button class="qa-btn" onclick="askAI(this)">⚠️ Quản trị rủi ro</button>
+            </div>
+            
             <div class="chat-msgs" id="chatMsgs">
               <div class="ai-welcome">
-                <div class="ai-icon">🤖</div>
-                <h3>Xin chào! Tôi là Trợ lý SSI LOG</h3>
-                <p>Tôi có thể giúp bạn phân tích danh mục, tâm lý giao dịch hoặc hướng dẫn bạn sử dụng các tính năng của website này.</p>
-                <div class="ai-chips">
-                  <button class="ai-chip" onclick="askAI(this)">❓ Cách sử dụng website này như thế nào?</button>
-                  <button class="ai-chip" onclick="askAI(this)">📊 Phân tích danh mục của tôi</button>
-                  <button class="ai-chip" onclick="askAI(this)">🧠 Kiểm tra tâm lý giao dịch</button>
-                  <button class="ai-chip" onclick="askAI(this)">📝 Hướng dẫn thêm giao dịch mới</button>
-                </div>
+                <div class="ai-icon">🚀</div>
+                <h3>Chào mừng đến với AI Insight</h3>
+                <p>Tôi đã sẵn sàng phân tích dữ liệu danh mục của bạn với tốc độ Flash.</p>
               </div>
             </div>
             <div class="chat-input-area">
-              <textarea id="chatInput" placeholder="Hỏi tôi bất cứ điều gì..." rows="1" onkeydown="chatKeyDown(event)" oninput="autoH(this)"></textarea>
+              <textarea id="chatInput" placeholder="Hỏi AI bất cứ điều gì về đầu tư..." rows="1" onkeydown="chatKeyDown(event)" oninput="autoH(this)"></textarea>
               <button class="send-btn" id="chatSend" onclick="sendChat()">➤</button>
             </div>
           </div>
 
-          <!-- QUICK ANALYSIS -->
+          <!-- SIDE INFO -->
           <div class="ai-side-col">
             <div class="ai-panel">
-              <h4>⚡ Phân tích nhanh</h4>
-              <button class="btn-primary full-w" onclick="runQuickAnalysis('portfolio')">📊 Phân tích danh mục</button>
-              <button class="btn-outline full-w mt8" onclick="runQuickAnalysis('psychology')">🧠 Phân tích tâm lý</button>
-              <button class="btn-outline full-w mt8" onclick="runQuickAnalysis('risk')">⚠️ Đánh giá rủi ro</button>
-              <button class="btn-outline full-w mt8" onclick="runQuickAnalysis('daily')">📰 Phân tích hôm nay</button>
+              <h4>🔥 Gợi ý cho bạn</h4>
+              <p class="hint-text" style="line-height:1.5">Bạn có thể hỏi: "Sharpe của tôi nói lên điều gì?" hoặc "Lịch sử mua HPG của tôi có hiệu quả không?"</p>
             </div>
-            <div id="aiResult" class="ai-panel" style="display:none">
-              <div class="ai-result-content" id="aiResultContent"></div>
+            <div class="ai-panel">
+              <h4>🛡️ Chế độ Phân tích</h4>
+              <div class="hint-text">Đang sử dụng: <strong>Streaming Mode</strong> (Tốc độ tối đa)</div>
             </div>
           </div>
         </div>
