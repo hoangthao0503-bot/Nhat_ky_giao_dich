@@ -190,22 +190,25 @@ function renderTxTable() {
 // ── AI CHAT ───────────────────────────────────────────────────
 function getApiKey() { return ($('apiKeyInput')?.value || localStorage.getItem('ssilog_apikey') || DEFAULT_API_KEY).trim(); }
 function getModel() { return $('modelSelect')?.value || 'gemini-1.5-flash'; }
-function buildContext() { return transactions.length ? 'DỮ LIỆU:\n'+transactions.slice(-30).map(t=>`${t.date}|${t.stock}|${t.type}|${t.qty}|${t.price}`).join('\n') : 'Chưa có dữ liệu.'; }
-const SYS_PROMPT = `Bạn là Trợ lý SSI LOG. Hướng dẫn dùng web: Dashboard (Tổng quan), Transactions (Thêm/Sửa/Xóa/Import), Data (Cài đặt API/Backup). Phân tích chứng khoán VN chuyên sâu.`;
+
+const SYS_PROMPT = `Bạn là Trợ lý SSI LOG chuyên gia chứng khoán VN. Hướng dẫn dùng web: Dashboard (Tổng quan), Transactions (Thêm/Sửa/Xóa/Import), Data (Cài đặt API/Backup).`;
 
 async function sendChat() {
   const inp = $('chatInput'), txt = inp.value.trim(); if(!txt)return; if(!getApiKey()){ toast('⚠️ Thiếu API Key!'); return; }
   appendChatMsg('user', txt); inp.value=''; inp.style.height='auto';
-  const tid = appendTyping(); const reply = await callGemini(buildContext()+'\n\nQ: '+txt); removeTyping(tid); appendChatMsg('model', reply);
+  const tid = appendTyping(); 
+  const fullPrompt = `${SYS_PROMPT}\n\nDỮ LIỆU GIAO DỊCH HIỆN TẠI:\n${transactions.slice(-30).map(t=>`${t.date}|${t.stock}|${t.type}|${t.qty}|${t.price}`).join('\n')}\n\nCÂU HỎI NGƯỜI DÙNG: ${txt}`;
+  const reply = await callGemini(fullPrompt); 
+  removeTyping(tid); appendChatMsg('model', reply);
 }
 
 async function callGemini(p) {
-  const url = `https://generativelanguage.googleapis.com/v1/models/${getModel()}:generateContent?key=${getApiKey()}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${getModel()}:generateContent?key=${getApiKey()}`;
   try {
-    const res = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ contents:[{role:'user',parts:[{text:p}]}], systemInstruction:{parts:[{text:SYS_PROMPT}]}, generationConfig:{temperature:0.7} }) });
-    if(!res.ok) return '❌ Lỗi: ' + (await res.json()).error?.message;
+    const res = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ contents:[{role:'user',parts:[{text:p}]}], generationConfig:{temperature:0.7} }) });
+    if(!res.ok) return '❌ Lỗi API: ' + (await res.json()).error?.message;
     return (await res.json()).candidates?.[0]?.content?.parts?.[0]?.text || '...';
-  } catch(e){ return '❌ Lỗi kết nối'; }
+  } catch(e){ return '❌ Lỗi kết nối AI'; }
 }
 
 function appendChatMsg(role, text) {
