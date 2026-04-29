@@ -51,7 +51,7 @@ function loginSuccess(u) {
   if (key && $('apiKeyInput')) {
     if (key.startsWith('AIza')) $('apiKeyInput').value = key;
   }
-  const model = localStorage.getItem('ssilog_model') || 'gemini-1.5-flash-latest';
+  const model = localStorage.getItem('ssilog_model') || 'gemini-1.5-flash';
   if ($('modelSelect')) $('modelSelect').value = model;
   updateAiStatus(!!getApiKey());
   showView('dashboard');
@@ -130,7 +130,6 @@ function refreshDashboard() {
     return relB.length ? t.price > (relB.reduce((a,b)=>a+b.price,0)/relB.length) : false;
   });
 
-  // Basic Metrics
   if($('metTotalCost')) $('metTotalCost').textContent = fmtVND(tCost);
   if($('metCurrentVal')) $('metCurrentVal').textContent = fmtVND(tCur);
   if($('metPnL')) { $('metPnL').textContent = fmtVND(pnl); $('metPnL').className = 'metric-val '+(pnl>=0?'pos':'neg'); }
@@ -138,7 +137,6 @@ function refreshDashboard() {
   if($('metWins')) $('metWins').textContent = wins.length + '/' + closed.length;
   if($('metWinRate')) $('metWinRate').textContent = (closed.length ? (wins.length/closed.length)*100 : 0).toFixed(1) + '%';
 
-  // Advanced Risk Metrics
   calculateRiskMetrics(transactions);
 
   const hBody = $('holdingsBody'), hList = $('holdingsList'), stocks = Object.keys(holdings);
@@ -158,8 +156,6 @@ function refreshDashboard() {
 function calculateRiskMetrics(txs) {
   if (txs.length < 3) return;
   const sorted = [...txs].sort((a,b)=>new Date(a.date)-new Date(b.date));
-  
-  // Equity Curve & Drawdown
   let cum = 0, peak = 0, maxDD = 0, returns = [];
   sorted.forEach(t => {
     const prev = cum;
@@ -169,15 +165,10 @@ function calculateRiskMetrics(txs) {
     const dd = peak > 0 ? (cum - peak) / peak : 0;
     if (dd < maxDD) maxDD = dd;
   });
-
-  // Sharpe Ratio (Simplified)
   const avgRet = returns.length ? returns.reduce((a,b)=>a+b,0)/returns.length : 0;
   const stdDev = returns.length ? Math.sqrt(returns.map(x=>Math.pow(x-avgRet,2)).reduce((a,b)=>a+b,0)/returns.length) : 0;
-  const sharpe = stdDev > 0 ? (avgRet / stdDev) * Math.sqrt(252) : 0; // Annualized
-
-  // Beta (Simulated vs Market 8% annual)
-  const beta = 0.8 + (stdDev * 10); // Approximation based on volatility
-
+  const sharpe = stdDev > 0 ? (avgRet / stdDev) * Math.sqrt(252) : 0;
+  const beta = 0.8 + (stdDev * 10);
   if($('metMaxDD')) $('metMaxDD').textContent = (maxDD * 100).toFixed(1) + '%';
   if($('metSharpe')) {
     $('metSharpe').textContent = sharpe.toFixed(2);
@@ -191,8 +182,6 @@ function calculateRiskMetrics(txs) {
 
 function drawCharts(holdings, txs) {
   if (typeof Chart === 'undefined') return;
-  
-  // P&L Chart
   const pCtx = $('pnlChart'), sorted = [...txs].sort((a,b)=>new Date(a.date)-new Date(b.date));
   if (pnlChartInst) pnlChartInst.destroy();
   if (pCtx && sorted.length) {
@@ -200,8 +189,6 @@ function drawCharts(holdings, txs) {
     let cum=0; const labels=[], data=[]; sorted.forEach(t=>{ cum+=(t.type==='SELL'?1:-1)*t.price*t.qty-(t.fee||0); labels.push(t.date); data.push(+cum.toFixed(0)); });
     pnlChartInst = new Chart(pCtx, { type:'line', data:{ labels, datasets:[{ label:'P&L', data, borderColor:'#1a56db', backgroundColor:'rgba(26,86,219,.1)', fill:true, tension:.3 }] }, options:{ responsive:true, plugins:{legend:{display:false}} } });
   }
-
-  // Allocation Chart
   const aCtx = $('allocChart'); if (allocChartInst) allocChartInst.destroy();
   const stocks = Object.keys(holdings);
   if (aCtx && stocks.length) {
@@ -209,8 +196,6 @@ function drawCharts(holdings, txs) {
     const vals = stocks.map(s=>holdings[s].curPrice*holdings[s].qty);
     allocChartInst = new Chart(aCtx, { type:'doughnut', data:{ labels:stocks, datasets:[{ data:vals, backgroundColor:['#1a56db','#cc0000','#16a34a','#d97706','#7c3aed'] }] }, options:{ responsive:true, plugins:{legend:{position:'bottom'}} } });
   }
-
-  // Risk & Performance Chart
   const rCtx = $('riskChart'); if (riskChartInst) riskChartInst.destroy();
   if (rCtx && sorted.length >= 5) {
     $('riskEmpty').style.display='none'; rCtx.style.display='block';
@@ -219,7 +204,7 @@ function drawCharts(holdings, txs) {
       cum += (t.type==='SELL'?1:-1)*t.price*t.qty; 
       labels.push(t.date); 
       myData.push(cum);
-      mktData.push(myData[0] * Math.pow(1.0003, i)); // Giả lập VNINDEX tăng 0.03%/ngày
+      mktData.push(myData[0] * Math.pow(1.0003, i));
     });
     riskChartInst = new Chart(rCtx, { 
       type:'line', 
@@ -278,7 +263,7 @@ function getApiKey() {
   return DEFAULT_API_KEY; 
 }
 function getModel() { 
-  const m = $('modelSelect')?.value || 'gemini-1.5-flash-latest';
+  const m = $('modelSelect')?.value || 'gemini-1.5-flash';
   return m.includes('/') ? m : `models/${m}`;
 }
 
