@@ -447,6 +447,30 @@
     };
   })();
 </script>
+<button id="cw-float-btn" onclick="toggleChatPanel()">
+  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+  </svg>
+</button>
+
+<div id="cw-panel">
+  <div class="cw-header">
+    <div class="cw-avatar">SSI</div>
+    <div>
+      <div style="font-size:14px; font-weight:600; color:#fff">Trợ lý Chiến lược</div>
+      <div style="font-size:11px; color:rgba(255,255,255,0.6)">Đang trực tuyến</div>
+    </div>
+    <button class="icon-btn" style="margin-left:auto; color:#fff" onclick="toggleChatPanel()">✕</button>
+  </div>
+  <div class="cw-msgs" id="cw-msgs-list">
+    <div class="cw-bubble cw-msg-bot">Chào bạn! Tôi là trợ lý chiến lược SSI LOG. Tôi có thể giúp gì cho danh mục của bạn hôm nay?</div>
+  </div>
+  <div class="cw-input-area">
+    <textarea id="cw-textarea-input" placeholder="Hỏi AI..." rows="1" onkeydown="cwKeyDown(event)"></textarea>
+    <button class="send-btn" onclick="sendCwMsg()" style="background:var(--cw-accent); width:40px; height:40px; border-radius:10px">➤</button>
+  </div>
+</div>
+
 <script src="app.js"></script>
 </body>
 </html>

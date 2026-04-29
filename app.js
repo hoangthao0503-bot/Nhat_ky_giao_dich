@@ -254,51 +254,69 @@ function renderTxTable() {
   }
 }
 
-// ── AI CHAT ───────────────────────────────────────────────────
+// ── AI ENGINE (GEMINI) ─────────────────────────────────────────
 function getApiKey() { 
   const inputK = ($('apiKeyInput')?.value || '').trim();
   const savedK = (localStorage.getItem('ssilog_apikey') || '').trim();
-  if (inputK.startsWith('AIza')) return inputK;
-  if (savedK.startsWith('AIza')) return savedK;
-  return DEFAULT_API_KEY; 
+  return (inputK.startsWith('AIza') ? inputK : (savedK.startsWith('AIza') ? savedK : DEFAULT_API_KEY)); 
 }
-function getModel() { 
-  const m = $('modelSelect')?.value || 'gemini-1.5-flash';
-  return m.includes('/') ? m : `models/${m}`;
-}
+function getModel() { const m = $('modelSelect')?.value || 'gemini-1.5-flash'; return m.includes('/') ? m : `models/${m}`; }
 
-const SYS_PROMPT = `Bạn là Trợ lý SSI LOG chuyên gia chứng khoán VN. Nhiệm vụ: Phân tích danh mục và hướng dẫn dùng web (Dashboard, Transactions, Data). Trả lời tiếng Việt, chuyên nghiệp.`;
-
-async function sendChat() {
-  const inp = $('chatInput'), txt = inp.value.trim(); if(!txt)return; if(!getApiKey()){ toast('⚠️ Thiếu API Key!'); return; }
-  appendChatMsg('user', txt); inp.value=''; inp.style.height='auto';
-  const tid = appendTyping(); 
-  const ctx = transactions.length ? `\n\nDANH MỤC CỦA TÔI:\n${transactions.slice(-30).map(t=>`${t.date}|${t.stock}|${t.type}|${t.qty}|${t.price}`).join('\n')}` : '';
-  const fullPrompt = `${SYS_PROMPT}${ctx}\n\nCÂU HỎI: ${txt}`;
-  const reply = await callGemini(fullPrompt); 
-  removeTyping(tid); appendChatMsg('model', reply);
-}
+const SYS_PROMPT = `Bạn là Trợ lý SSI LOG chuyên gia chứng khoán VN. Nhiệm vụ: Phân tích danh mục và hướng dẫn dùng web. Trả lời tiếng Việt, chuyên nghiệp, ngắn gọn.`;
 
 async function callGemini(p) {
-  const modelName = getModel();
-  const url = `https://generativelanguage.googleapis.com/v1beta/${modelName}:generateContent?key=${getApiKey()}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/${getModel()}:generateContent?key=${getApiKey()}`;
   try {
     const res = await fetch(url, { 
-      method:'POST', 
-      headers:{'Content-Type':'application/json'}, 
-      body:JSON.stringify({ 
-        contents:[{
-          parts:[{text:p}]
-        }]
-      }) 
+      method:'POST', headers:{'Content-Type':'application/json'}, 
+      body:JSON.stringify({ contents:[{ parts:[{text:p}] }] }) 
     });
-    if(!res.ok) {
-      const err = await res.json();
-      return '❌ Lỗi API: ' + (err.error?.message || 'Không xác định');
-    }
+    if(!res.ok) { const err = await res.json(); return '❌ Lỗi AI: ' + (err.error?.message || 'Không xác định'); }
     const data = await res.json();
     return data.candidates?.[0]?.content?.parts?.[0]?.text || '...';
   } catch(e){ return '❌ Lỗi kết nối AI'; }
+}
+
+// ── FLOATING CHAT WIDGET LOGIC ────────────────────────────────
+function toggleChatPanel() { $('cw-panel').classList.toggle('open'); }
+
+async function sendCwMsg() {
+  const inp = $('cw-textarea-input'), txt = inp.value.trim(); if(!txt)return;
+  inp.value = ''; appendCwMsg('user', txt);
+  const tid = appendCwTyping();
+  const ctx = transactions.length ? `\n\nDANH MỤC: ${transactions.slice(-20).map(t=>`${t.stock}|${t.type}|${t.qty}|${t.price}`).join('; ')}` : '';
+  const reply = await callGemini(`${SYS_PROMPT}${ctx}\n\nKHÁCH HỎI: ${txt}`);
+  removeCwTyping(tid); appendCwMsg('bot', reply);
+}
+
+function appendCwMsg(role, text) {
+  const list = $('cw-msgs-list');
+  const d = document.createElement('div');
+  d.className = `cw-bubble cw-msg-${role}`;
+  d.textContent = text;
+  list.appendChild(d);
+  list.scrollTop = list.scrollHeight;
+}
+
+function appendCwTyping() {
+  const id = 't'+Date.now(), list = $('cw-msgs-list');
+  const d = document.createElement('div');
+  d.id = id; d.className = 'cw-bubble cw-msg-bot';
+  d.innerHTML = '<div style="display:flex;gap:4px"><div class="dot">.</div><div class="dot">.</div><div class="dot">.</div></div>';
+  list.appendChild(d); list.scrollTop = list.scrollHeight;
+  return id;
+}
+function removeCwTyping(id) { const e=$(id); if(e) e.remove(); }
+function cwKeyDown(e) { if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendCwMsg(); } }
+
+// ── MAIN CHAT VIEW (SYNC WITH FLOATING) ───────────────────────
+async function sendChat() {
+  const inp = $('chatInput'), txt = inp.value.trim(); if(!txt)return;
+  appendChatMsg('user', txt); inp.value=''; inp.style.height='auto';
+  const tid = appendTyping();
+  const ctx = transactions.length ? `\n\nDANH MỤC: ${transactions.slice(-20).map(t=>`${t.stock}|${t.type}|${t.qty}|${t.price}`).join('; ')}` : '';
+  const reply = await callGemini(`${SYS_PROMPT}${ctx}\n\nKHÁCH HỎI: ${txt}`);
+  removeTyping(tid); appendChatMsg('model', reply);
 }
 
 function appendChatMsg(role, text) {
@@ -309,8 +327,7 @@ function appendChatMsg(role, text) {
 }
 function appendTyping() { const id='t'+Date.now(), msgs=$('chatMsgs'); const d=document.createElement('div'); d.id=id; d.className='chat-msg model'; d.innerHTML='<div class="chat-av model">🤖</div><div class="typing-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>'; msgs.appendChild(d); return id; }
 function removeTyping(id) { const e=$(id); if(e) e.remove(); }
-function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-function parseMd(t) { return escHtml(t).replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>'); }
+function parseMd(t) { return t.replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>'); }
 
 // ── DATA ──────────────────────────────────────────────────────
 function exportJSON(){ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([JSON.stringify(transactions)],{type:'application/json'})); a.download='ssi.json'; a.click(); }
@@ -319,4 +336,4 @@ function exportCSV(){ const csv=transactions.map(t=>[t.date,t.stock,t.type,t.qty
 function clearAllData(){ if(confirm('Xóa hết?')){ transactions=[]; saveTxs(); renderTxTable(); } }
 
 // ── GLOBAL ────────────────────────────────────────────────────
-Object.assign(window, { switchTab, doLogin, doRegister, doGoogleLogin, doLogout, showView, saveApiKey, openAddTx, closeTxModal, saveTx, editTx, deleteTx, renderTxTable, sendChat, exportJSON, importJSON, exportCSV, clearAllData, calculateFee, askAI: (b)=> { $('chatInput').value=b.textContent; sendChat(); } });
+Object.assign(window, { switchTab, doLogin, doRegister, doGoogleLogin, doLogout, showView, saveApiKey, openAddTx, closeTxModal, saveTx, editTx, deleteTx, renderTxTable, sendChat, exportJSON, importJSON, exportCSV, clearAllData, calculateFee, toggleChatPanel, sendCwMsg, cwKeyDown, askAI: (b)=> { $('chatInput').value=b.textContent; sendChat(); } });
