@@ -260,18 +260,32 @@ function getApiKey() {
   const savedK = (localStorage.getItem('ssilog_apikey') || '').trim();
   return (inputK.startsWith('AIza') ? inputK : (savedK.startsWith('AIza') ? savedK : DEFAULT_API_KEY)); 
 }
-function getModel() { const m = $('modelSelect')?.value || 'gemini-1.5-flash'; return m.includes('/') ? m : `models/${m}`; }
 
-const SYS_PROMPT = `Bạn là Trợ lý SSI LOG chuyên gia chứng khoán VN. Nhiệm vụ: Phân tích danh mục và hướng dẫn dùng web. Trả lời tiếng Việt, chuyên nghiệp, ngắn gọn.`;
-
+// CHUYỂN SANG V1 ENDPOINT VÀ MODEL CỐ ĐỊNH ĐỂ CỨU CHATBOT
 async function callGemini(p) {
-  const url = `https://generativelanguage.googleapis.com/v1beta/${getModel()}:generateContent?key=${getApiKey()}`;
+  // Thử v1 endpoint - chính thức và ổn định nhất
+  const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${getApiKey()}`;
   try {
     const res = await fetch(url, { 
       method:'POST', headers:{'Content-Type':'application/json'}, 
       body:JSON.stringify({ contents:[{ parts:[{text:p}] }] }) 
     });
-    if(!res.ok) { const err = await res.json(); return '❌ Lỗi AI: ' + (err.error?.message || 'Không xác định'); }
+    
+    // NẾU VẪN LỖI (VÍ DỤ V1 CHƯA CÓ TRONG VÙNG ĐÓ), THỬ LẠI VỚI GEMINI-PRO NHƯ LỰA CHỌN B
+    if(!res.ok) {
+       const urlFallback = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${getApiKey()}`;
+       const resFallback = await fetch(urlFallback, { 
+         method:'POST', headers:{'Content-Type':'application/json'}, 
+         body:JSON.stringify({ contents:[{ parts:[{text:p}] }] }) 
+       });
+       if (!resFallback.ok) {
+          const err = await resFallback.json();
+          return '❌ Lỗi AI: ' + (err.error?.message || 'Không xác định');
+       }
+       const dataF = await resFallback.json();
+       return dataF.candidates?.[0]?.content?.parts?.[0]?.text || '...';
+    }
+    
     const data = await res.json();
     return data.candidates?.[0]?.content?.parts?.[0]?.text || '...';
   } catch(e){ return '❌ Lỗi kết nối AI'; }
@@ -321,7 +335,7 @@ async function sendChat() {
 
 function appendChatMsg(role, text) {
   const msgs = $('chatMsgs'); if(msgs){
-    const d=document.createElement('div'); d.className='chat-msg '+role; d.innerHTML=`<div class="chat-av ${role}">${role==='user'?'👤':'🤖'}</div><div class="chat-msg-body"><div class="chat-msg-text">${parseMd(text)}</div></div>`;
+    const d=document.createElement('div'); d.className='chat-msg '+role; d.innerHTML=`<div class="chat-av ${role}">${role==='user'?'👤':'🤖'}</div><div class="chat-av-body"><div class="chat-msg-text">${parseMd(text)}</div></div>`;
     msgs.appendChild(d); msgs.scrollTop=msgs.scrollHeight; const w=msgs.querySelector('.ai-welcome'); if(w) w.style.display='none';
   }
 }
