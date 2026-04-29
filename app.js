@@ -165,8 +165,16 @@ function drawCharts(holdings, txs) {
 // ── TRANSACTIONS ──────────────────────────────────────────────
 function openAddTx() { editingTxId=null; if($('txModalTitle')) $('txModalTitle').textContent='Thêm GD'; $('txDate').value=new Date().toISOString().slice(0,10); $('txStock').value=$('txType').value=$('txNote').value=$('txQty').value=$('txPrice').value=$('txFee').value=$('txCurrentPrice').value=''; $('txFee').value=0; $('txModal').style.display='flex'; }
 function closeTxModal() { $('txModal').style.display='none'; }
+function calculateFee() {
+  const qty = parseInt($('txQty')?.value || 0);
+  const price = parseFloat($('txPrice')?.value || 0) * 1000;
+  const fee = Math.round(qty * price * 0.0015);
+  const feeInput = $('txFee');
+  if (feeInput) feeInput.value = fee;
+}
+
 function saveTx() {
-  const date=$('txDate').value, stock=$('txStock').value.trim().toUpperCase(), type=$('txType').value, qty=parseInt($('txQty').value), price=parseFloat($('txPrice').value), fee=parseFloat($('txFee').value)||0, curP=parseFloat($('txCurrentPrice').value)||0, note=$('txNote').value.trim();
+  const date=$('txDate').value, stock=$('txStock').value.trim().toUpperCase(), type=$('txType').value, qty=parseInt($('txQty').value), price=parseFloat($('txPrice').value) * 1000, fee=parseFloat($('txFee').value)||0, curP=(parseFloat($('txCurrentPrice').value)||0) * 1000, note=$('txNote').value.trim();
   if(!date||!stock||!qty||!price){ toast('⚠️ Thiếu thông tin!'); return; }
   if(editingTxId){ const idx=transactions.findIndex(t=>t.id===editingTxId); if(idx>=0) transactions[idx]={id:editingTxId,date,stock,type,qty,price,fee,currentPrice:curP,note}; }
   else { transactions.push({id:Date.now().toString(),date,stock,type,qty,price,fee,currentPrice:curP,note}); }
@@ -174,7 +182,7 @@ function saveTx() {
 }
 function editTx(id) {
   const t = transactions.find(x=>x.id===id); if(!t)return; editingTxId=id; if($('txModalTitle')) $('txModalTitle').textContent='Sửa GD';
-  $('txDate').value=t.date; $('txStock').value=t.stock; $('txType').value=t.type; $('txQty').value=t.qty; $('txPrice').value=t.price; $('txFee').value=t.fee||0; $('txCurrentPrice').value=t.currentPrice||''; $('txNote').value=t.note||''; $('txModal').style.display='flex';
+  $('txDate').value=t.date; $('txStock').value=t.stock; $('txType').value=t.type; $('txQty').value=t.qty; $('txPrice').value=t.price / 1000; $('txFee').value=t.fee||0; $('txCurrentPrice').value=t.currentPrice ? t.currentPrice / 1000 : ''; $('txNote').value=t.note||''; $('txModal').style.display='flex';
 }
 function deleteTx(id) { if(confirm('Xóa?')){ transactions=transactions.filter(t=>t.id!==id); saveTxs(); renderTxTable(); toast('🗑️ Đã xóa!'); } }
 function renderTxTable() {
@@ -229,4 +237,4 @@ function exportCSV(){ const csv=transactions.map(t=>[t.date,t.stock,t.type,t.qty
 function clearAllData(){ if(confirm('Xóa hết?')){ transactions=[]; saveTxs(); renderTxTable(); } }
 
 // ── GLOBAL ────────────────────────────────────────────────────
-Object.assign(window, { switchTab, doLogin, doRegister, doGoogleLogin, doLogout, showView, saveApiKey, openAddTx, closeTxModal, saveTx, editTx, deleteTx, renderTxTable, sendChat, exportJSON, importJSON, exportCSV, clearAllData, askAI: (b)=> { $('chatInput').value=b.textContent; sendChat(); } });
+Object.assign(window, { switchTab, doLogin, doRegister, doGoogleLogin, doLogout, showView, saveApiKey, openAddTx, closeTxModal, saveTx, editTx, deleteTx, renderTxTable, sendChat, exportJSON, importJSON, exportCSV, clearAllData, calculateFee, askAI: (b)=> { $('chatInput').value=b.textContent; sendChat(); } });

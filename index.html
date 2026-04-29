@@ -348,22 +348,22 @@
         </div>
         <div class="form-group">
           <label>Số lượng *</label>
-          <input type="number" id="txQty" class="form-input" placeholder="100" min="1"/>
+          <input type="number" id="txQty" class="form-input" placeholder="100" min="1" oninput="calculateFee()"/>
         </div>
       </div>
       <div class="form-row">
         <div class="form-group">
-          <label>Giá (VNĐ/cp) *</label>
-          <input type="number" id="txPrice" class="form-input" placeholder="85000" min="0"/>
+          <label>Giá (nghìn đồng/cp) *</label>
+          <input type="number" id="txPrice" class="form-input" placeholder="Ví dụ: 85.5" min="0" oninput="calculateFee()"/>
         </div>
         <div class="form-group">
-          <label>Phí giao dịch (VNĐ)</label>
-          <input type="number" id="txFee" class="form-input" placeholder="0" min="0" value="0"/>
+          <label>Phí GD (0.15% - VNĐ)</label>
+          <input type="number" id="txFee" class="form-input" placeholder="Tự động tính..." readonly/>
         </div>
       </div>
       <div class="form-group">
-        <label>Giá hiện tại (VNĐ/cp) – dùng tính P&L</label>
-        <input type="number" id="txCurrentPrice" class="form-input" placeholder="Để trống nếu chưa có"/>
+        <label>Giá hiện tại (nghìn đồng/cp)</label>
+        <input type="number" id="txCurrentPrice" class="form-input" placeholder="Ví dụ: 90"/>
       </div>
       <div class="form-group">
         <label>Ghi chú / Lý do</label>
