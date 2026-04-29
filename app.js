@@ -48,7 +48,10 @@ function loginSuccess(u) {
   $('authScreen').style.display = 'none'; $('appScreen').style.display = 'flex';
   $('userName').textContent = u.name || u.email;
   const key = localStorage.getItem('ssilog_apikey');
-  if (key && $('apiKeyInput')) $('apiKeyInput').value = key;
+  if (key && $('apiKeyInput')) {
+    // Chỉ hiển thị nếu key trông có vẻ hợp lệ (bắt đầu bằng AIza)
+    if (key.startsWith('AIza')) $('apiKeyInput').value = key;
+  }
   const model = localStorage.getItem('ssilog_model') || 'gemini-1.5-flash';
   if ($('modelSelect')) $('modelSelect').value = model;
   updateAiStatus(!!getApiKey());
@@ -83,9 +86,13 @@ document.addEventListener('DOMContentLoaded', () => {
 function saveApiKey() { 
   const key = $('apiKeyInput')?.value.trim();
   if (key !== undefined) {
-    localStorage.setItem('ssilog_apikey', key); 
-    updateAiStatus(!!getApiKey());
-    toast('✅ Đã lưu cấu hình AI!'); 
+    if (key === '' || key.startsWith('AIza')) {
+      localStorage.setItem('ssilog_apikey', key); 
+      updateAiStatus(!!getApiKey());
+      toast('✅ Đã lưu cấu hình AI!'); 
+    } else {
+      toast('⚠️ API Key không hợp lệ! Phải bắt đầu bằng AIza...');
+    }
   }
 }
 
@@ -196,7 +203,15 @@ function renderTxTable() {
 }
 
 // ── AI CHAT ───────────────────────────────────────────────────
-function getApiKey() { return ($('apiKeyInput')?.value || localStorage.getItem('ssilog_apikey') || DEFAULT_API_KEY).trim(); }
+function getApiKey() { 
+  const inputK = ($('apiKeyInput')?.value || '').trim();
+  const savedK = (localStorage.getItem('ssilog_apikey') || '').trim();
+  
+  // Nếu input hoặc savedKey bắt đầu bằng AIza, dùng nó. Ngược lại dùng mặc định.
+  if (inputK.startsWith('AIza')) return inputK;
+  if (savedK.startsWith('AIza')) return savedK;
+  return DEFAULT_API_KEY; 
+}
 function getModel() { return $('modelSelect')?.value || 'gemini-1.5-flash'; }
 
 const SYS_PROMPT = `Bạn là Trợ lý SSI LOG chuyên gia chứng khoán VN. Nhiệm vụ: Phân tích danh mục và hướng dẫn dùng web (Dashboard, Transactions, Data). Trả lời tiếng Việt, chuyên nghiệp.`;
@@ -212,7 +227,6 @@ async function sendChat() {
 }
 
 async function callGemini(p) {
-  // SỬ DỤNG PHIÊN BẢN V1 - ĐƠN GIẢN HÓA TỐI ĐA ĐỂ TRÁNH LỖI PHIÊN BẢN
   const url = `https://generativelanguage.googleapis.com/v1/models/${getModel()}:generateContent?key=${getApiKey()}`;
   try {
     const res = await fetch(url, { 
