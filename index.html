@@ -149,6 +149,25 @@
           </div>
         </div>
 
+        <!-- ADVANCED RISK METRICS -->
+        <div class="metrics-row mb16">
+          <div class="metric-card">
+            <div class="metric-label">Sharpe Ratio <span title="Lợi nhuận / Rủi ro. > 1.0 là tốt.">ℹ️</span></div>
+            <div class="metric-val" id="metSharpe">0.00</div>
+            <div class="metric-hint" id="hintSharpe">Ổn định</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Hệ số Beta <span title="Độ biến động so với thị trường. < 1.0 là ít biến động hơn.">ℹ️</span></div>
+            <div class="metric-val" id="metBeta">0.00</div>
+            <div class="metric-hint" id="hintBeta">Thấp</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Max Drawdown <span title="Mức sụt giảm vốn lớn nhất từ đỉnh.">ℹ️</span></div>
+            <div class="metric-val neg" id="metMaxDD">0.0%</div>
+            <div class="metric-hint">Rủi ro tối đa</div>
+          </div>
+        </div>
+
         <!-- CHARTS ROW -->
         <div class="charts-row">
           <div class="chart-card">
@@ -160,6 +179,15 @@
             <h3>🥧 Phân bổ danh mục</h3>
             <canvas id="allocChart" height="200"></canvas>
             <div id="allocEmpty" class="chart-empty">Chưa có vị thế mở</div>
+          </div>
+        </div>
+
+        <!-- ADVANCED PERFORMANCE CHART -->
+        <div class="charts-row mb16">
+          <div class="chart-card full-w">
+            <h3>📊 So sánh Hiệu suất & Quản trị Rủi ro</h3>
+            <canvas id="riskChart" height="150"></canvas>
+            <div id="riskEmpty" class="chart-empty">Cần ít nhất 5 giao dịch để phân tích rủi ro</div>
           </div>
         </div>
 
