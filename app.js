@@ -200,7 +200,7 @@ async function sendChat() {
 }
 
 async function callGemini(p) {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${getModel()}:generateContent?key=${getApiKey()}`;
+  const url = `https://generativelanguage.googleapis.com/v1/models/${getModel()}:generateContent?key=${getApiKey()}`;
   try {
     const res = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ contents:[{role:'user',parts:[{text:p}]}], systemInstruction:{parts:[{text:SYS_PROMPT}]}, generationConfig:{temperature:0.7} }) });
     if(!res.ok) return '❌ Lỗi: ' + (await res.json()).error?.message;
