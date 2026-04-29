@@ -1,6 +1,6 @@
 // ── CONFIG ────────────────────────────────────────────────────
 // DÁN API KEY CỦA BẠN VÀO GIỮA DẤU NGOẶC KÉP DƯỚI ĐÂY ĐỂ DÙNG NGAY
-const DEFAULT_API_KEY = ""; 
+const DEFAULT_API_KEY = "AIzaSyA45PZwVEbo4GYDIdSs2rt-BBBgJZRPL04"; 
 
 // ── DATA ──────────────────────────────────────────────────────
 let currentUser = null;
