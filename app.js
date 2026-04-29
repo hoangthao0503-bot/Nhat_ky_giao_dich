@@ -1,5 +1,4 @@
 // ── CONFIG ────────────────────────────────────────────────────
-// DÁN API KEY CỦA BẠN VÀO GIỮA DẤU NGOẶC KÉP DƯỚI ĐÂY ĐỂ DÙNG NGAY
 const DEFAULT_API_KEY = "AIzaSyA45PZwVEbo4GYDIdSs2rt-BBBgJZRPL04"; 
 
 // ── DATA ──────────────────────────────────────────────────────
@@ -165,6 +164,7 @@ function drawCharts(holdings, txs) {
 // ── TRANSACTIONS ──────────────────────────────────────────────
 function openAddTx() { editingTxId=null; if($('txModalTitle')) $('txModalTitle').textContent='Thêm GD'; $('txDate').value=new Date().toISOString().slice(0,10); $('txStock').value=$('txType').value=$('txNote').value=$('txQty').value=$('txPrice').value=$('txFee').value=$('txCurrentPrice').value=''; $('txFee').value=0; $('txModal').style.display='flex'; }
 function closeTxModal() { $('txModal').style.display='none'; }
+
 function calculateFee() {
   const qty = parseInt($('txQty')?.value || 0);
   const price = parseFloat($('txPrice')?.value || 0) * 1000;
@@ -199,23 +199,37 @@ function renderTxTable() {
 function getApiKey() { return ($('apiKeyInput')?.value || localStorage.getItem('ssilog_apikey') || DEFAULT_API_KEY).trim(); }
 function getModel() { return $('modelSelect')?.value || 'gemini-1.5-flash'; }
 
-const SYS_PROMPT = `Bạn là Trợ lý SSI LOG chuyên gia chứng khoán VN. Hướng dẫn dùng web: Dashboard (Tổng quan), Transactions (Thêm/Sửa/Xóa/Import), Data (Cài đặt API/Backup).`;
+const SYS_PROMPT = `Bạn là Trợ lý SSI LOG chuyên gia chứng khoán VN. Nhiệm vụ: Phân tích danh mục và hướng dẫn dùng web (Dashboard, Transactions, Data). Trả lời tiếng Việt, chuyên nghiệp.`;
 
 async function sendChat() {
   const inp = $('chatInput'), txt = inp.value.trim(); if(!txt)return; if(!getApiKey()){ toast('⚠️ Thiếu API Key!'); return; }
   appendChatMsg('user', txt); inp.value=''; inp.style.height='auto';
   const tid = appendTyping(); 
-  const fullPrompt = `${SYS_PROMPT}\n\nDỮ LIỆU GIAO DỊCH HIỆN TẠI:\n${transactions.slice(-30).map(t=>`${t.date}|${t.stock}|${t.type}|${t.qty}|${t.price}`).join('\n')}\n\nCÂU HỎI NGƯỜI DÙNG: ${txt}`;
+  const ctx = transactions.length ? `\n\nDANH MỤC CỦA TÔI:\n${transactions.slice(-30).map(t=>`${t.date}|${t.stock}|${t.type}|${t.qty}|${t.price}`).join('\n')}` : '';
+  const fullPrompt = `${SYS_PROMPT}${ctx}\n\nCÂU HỎI: ${txt}`;
   const reply = await callGemini(fullPrompt); 
   removeTyping(tid); appendChatMsg('model', reply);
 }
 
 async function callGemini(p) {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${getModel()}:generateContent?key=${getApiKey()}`;
+  // SỬ DỤNG PHIÊN BẢN V1 - ĐƠN GIẢN HÓA TỐI ĐA ĐỂ TRÁNH LỖI PHIÊN BẢN
+  const url = `https://generativelanguage.googleapis.com/v1/models/${getModel()}:generateContent?key=${getApiKey()}`;
   try {
-    const res = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ contents:[{role:'user',parts:[{text:p}]}], generationConfig:{temperature:0.7} }) });
-    if(!res.ok) return '❌ Lỗi API: ' + (await res.json()).error?.message;
-    return (await res.json()).candidates?.[0]?.content?.parts?.[0]?.text || '...';
+    const res = await fetch(url, { 
+      method:'POST', 
+      headers:{'Content-Type':'application/json'}, 
+      body:JSON.stringify({ 
+        contents:[{
+          parts:[{text:p}]
+        }]
+      }) 
+    });
+    if(!res.ok) {
+      const err = await res.json();
+      return '❌ Lỗi API: ' + (err.error?.message || 'Không xác định');
+    }
+    const data = await res.json();
+    return data.candidates?.[0]?.content?.parts?.[0]?.text || '...';
   } catch(e){ return '❌ Lỗi kết nối AI'; }
 }
 
